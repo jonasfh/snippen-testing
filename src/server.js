@@ -8,7 +8,7 @@ export function createServer(app = createApp()) {
 }
 
 export function startServer(config = loadConfig()) {
-  const app = createApp();
+  const app = createApp(config);
   const server = createServer(app);
 
   return new Promise((resolve, reject) => {

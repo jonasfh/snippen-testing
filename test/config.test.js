@@ -9,6 +9,7 @@ describe("loadConfig", () => {
       port: 3000,
       host: "0.0.0.0",
       nodeEnv: "development",
+      smsServiceWebhookUrl: "http://127.0.0.1:3001/webhook/sms",
     });
   });
 
@@ -17,11 +18,13 @@ describe("loadConfig", () => {
       PORT: "8080",
       HOST: "127.0.0.1",
       NODE_ENV: "production",
+      SMS_SERVICE_WEBHOOK_URL: "http://custom-sms:8000/api/webhook",
     });
     assert.deepEqual(config, {
       port: 8080,
       host: "127.0.0.1",
       nodeEnv: "production",
+      smsServiceWebhookUrl: "http://custom-sms:8000/api/webhook",
     });
   });
 
@@ -44,6 +47,13 @@ describe("loadConfig", () => {
     assert.throws(
       () => loadConfig({ PORT: "-1" }),
       /Invalid PORT configuration/,
+    );
+  });
+
+  it("should throw error for invalid webhook URL", () => {
+    assert.throws(
+      () => loadConfig({ SMS_SERVICE_WEBHOOK_URL: "not-a-valid-url" }),
+      /Invalid SMS_SERVICE_WEBHOOK_URL configuration/,
     );
   });
 });
