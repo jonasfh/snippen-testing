@@ -36,8 +36,8 @@ This repository is a test harness for integration and end-to-end testing of the 
 
 The primary systems under test are:
 
-* `snippen-booking`
-* `snippen-sms-service`
+- `snippen-booking`
+- `snippen-sms-service`
 
 The repository is **not** a production SMS service.
 
@@ -47,10 +47,10 @@ Its purpose is to make it possible to run realistic communication scenarios loca
 
 The project uses:
 
-* Node.js
-* JavaScript
-* npm
-* Docker / Docker Compose
+- Node.js
+- JavaScript
+- npm
+- Docker / Docker Compose
 
 The Node.js application is the HTTP server.
 
@@ -92,15 +92,15 @@ SMS is primarily used for operational communication related to bookings.
 
 Examples include:
 
-* door/access codes
-* practical information
-* tables and chairs
-* cleaning
-* payment reminders
-* administrative messages
-* reminders
-* questions or replies from tenants
-* administrator notifications
+- door/access codes
+- practical information
+- tables and chairs
+- cleaning
+- payment reminders
+- administrative messages
+- reminders
+- questions or replies from tenants
+- administrator notifications
 
 Do not design test scenarios around artificial booking-confirmation protocols such as:
 
@@ -136,13 +136,13 @@ Do not replace `snippen-booking` or `snippen-sms-service` with mocks when an act
 
 Tests should:
 
-* use realistic business scenarios
-* be deterministic
-* isolate their data
-* avoid real SMS
-* avoid production infrastructure
-* make failures easy to diagnose
-* verify observable behavior rather than implementation details
+- use realistic business scenarios
+- be deterministic
+- isolate their data
+- avoid real SMS
+- avoid production infrastructure
+- make failures easy to diagnose
+- verify observable behavior rather than implementation details
 
 ### Test Data
 
@@ -150,11 +150,11 @@ Use clearly identifiable test users, bookings and phone numbers.
 
 Never commit:
 
-* real customer data
-* real phone numbers
-* production credentials
-* API keys
-* production URLs unless they are explicitly documented public values
+- real customer data
+- real phone numbers
+- production credentials
+- API keys
+- production URLs unless they are explicitly documented public values
 
 Test data should be disposable.
 
@@ -164,11 +164,11 @@ The fake provider represents the external SMS provider.
 
 It should:
 
-* accept outgoing SMS from `snippen-sms-service`
-* retain outgoing messages for inspection
-* allow tests to inject incoming SMS
-* expose enough information for tests to verify message delivery
-* support resetting its state
+- accept outgoing SMS from `snippen-sms-service`
+- retain outgoing messages for inspection
+- allow tests to inject incoming SMS
+- expose enough information for tests to verify message delivery
+- support resetting its state
 
 The fake provider should not attempt to emulate a real SMS network beyond what is required by the tests.
 
@@ -198,11 +198,11 @@ The default configuration must be safe and must not be able to send real SMS acc
 
 Use environment variables or test-specific configuration for:
 
-* service URLs
-* ports
-* credentials
-* feature flags
-* test-specific settings
+- service URLs
+- ports
+- credentials
+- feature flags
+- test-specific settings
 
 Do not hard-code environment-specific values in application code.
 
@@ -218,9 +218,9 @@ Documentation should explain not only how something works, but also why the arch
 
 For changes that affect behavior:
 
-* add or update automated tests
-* update relevant test scenarios
-* update documentation when necessary
-* verify Docker/CI compatibility when relevant
+- add or update automated tests
+- update relevant test scenarios
+- update documentation when necessary
+- verify Docker/CI compatibility when relevant
 
 A solution that only works on one developer's machine is not considered complete.

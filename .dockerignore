@@ -1,0 +1,10 @@
+node_modules
+npm-debug.log
+.git
+.agents
+.env
+coverage
+test
+.prettierrc
+.prettierignore
+eslint.config.js
