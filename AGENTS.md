@@ -11,6 +11,17 @@ All developers and AI agents must follow the core workflows, documentation rules
 
 ---
 
+## Node.js Guidelines
+
+All Node.js-based services, modules, and tests must adhere to the conventions defined in the Node.js agent instructions submodule:
+
+- 🏗️ **[Architecture & Backend Design](file:///./.agents/node-agent-instructions/ARCHITECTURE.md)**: Layered structure, environment configuration, async patterns, error handling, and graceful shutdown.
+- 📦 **[Package & Dependency Management](file:///./.agents/node-agent-instructions/DEPENDENCIES.md)**: `npm` conventions, `package-lock.json`, dependency minimization, and script definitions.
+- 🧪 **[Testing & Quality Assurance](file:///./.agents/node-agent-instructions/TESTING.md)**: Node test runner conventions, boundary mocking, and deterministic async testing.
+- 🎨 **[Code Style & Idioms](file:///./.agents/node-agent-instructions/CODE_STYLE.md)**: Modern JavaScript/TypeScript standards, error hierarchy, and structured logging.
+
+---
+
 ## Repository-Specific Instructions
 
 ### Objective
