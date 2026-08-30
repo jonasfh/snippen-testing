@@ -1,6 +1,6 @@
 {
   "name": "snippen-testing",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Integration test harness for Snippen booking and SMS service",
   "main": "src/server.js",
   "type": "module",
