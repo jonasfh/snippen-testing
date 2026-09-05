@@ -4,6 +4,10 @@ Test-oppsett for integrasjons- og ende-til-ende-testing av Snippen-økosystemet 
 
 Repositoryet inneholder en **Fake SMS Provider** og et interaktivt **Web Dashboard** som erstatter eksterne SMS-leverandører under lokal utvikling og automatiserte integrasjonstester. Dette gjør det mulig å verifisere hele meldingsflyten uten å sende reelle SMS eller være avhengig av eksterne tredjepartstjenester.
 
+> 📖 **Detaljert testguide**: For en grundig gjennomgang av webadresser, innloggingsdetaljer og manuelle testscenarier, se **[TESTING.md](TESTING.md)**.
+
+---
+
 ## Arkitektur & Kommunikasjonsflyt
 
 ```text
@@ -50,8 +54,8 @@ docker compose up --build -d
 
 Når containerne er oppe og sunne (`healthy`):
 
-- **Web Frontend Dashboard**: Åpne `http://localhost:3000` i nettleseren.
-- **Snippen Booking**: Tilgjengelig på `http://localhost:8080`.
+- **Web Frontend Dashboard**: Åpne [http://localhost:3000](http://localhost:3000) i nettleseren.
+- **Snippen Booking Admin**: Åpne [http://localhost:8080/wp-admin/](http://localhost:8080/wp-admin/) (`admin` / `admin`).
 - **Logger**: Følg sanntidslogger med `docker compose logs -f`.
 
 Stopp hele stacken:
@@ -77,17 +81,13 @@ npm run dev
 
 ### Utvikling i Dev Container
 
-Repositoryet inneholder en ferdig Dev Container-konfigurasjon (`.devcontainer/devcontainer.json`) for VS Code og GitHub Codespaces.
-
-1. Åpne prosjektmappen i VS Code.
-2. Trykk `F1` og velg **Dev Containers: Reopen in Container**.
-3. VS Code bygger og starter containeren med alle nødvendige verktøy (Node.js, npm, Git, ESLint, Prettier og Docker CLI).
+Repositoryet inneholder en ferdig Dev Container-konfigurasjon (`.devcontainer/devcontainer.json`) for VS Code og GitHub Codespaces med automatisk port-videresending av port `3000` og `8080`.
 
 ---
 
 ## Web Frontend Dashboard
 
-Når Fake SMS Provider kjører, kan du åpne `http://localhost:3000` for å få tilgang til Web Dashboardet:
+Når Fake SMS Provider kjører, gir [http://localhost:3000](http://localhost:3000) tilgang til:
 
 1. **Meldingsfeed**: Se alle innkommende og utgående meldinger i sanntid med avsender, mottaker, innhold, status og tidsstempel.
 2. **SMS-simulator**: Send en simulert innkommende SMS fra et gitt telefonnummer med forhåndsdefinerte hurtigmaler.
@@ -109,87 +109,37 @@ Tjenesten konfigureres via miljøvariabler:
 
 ---
 
-## API-dokumentasjon
+## API-oversikt
 
-### 1. Dashboard & Helse
-
-- **Dashboard UI**: `GET /` (returnerer HTML)
-- **Helseendepunkt**: `GET /health` (`200 OK` med `status`, `uptime`, `timestamp`)
-
-### 2. Sende utgående SMS (Fake Provider Send API)
-
-Brukt av `snippen-sms-service` for å levere en SMS:
-
-- **Endepunkt**: `POST /messages/outbound` (alias: `POST /sms/send`, `POST /messages`)
-- **Body**:
-
-```json
-{
-  "to": "+4799887766",
-  "text": "Din adgangskode til Snippen er 4821"
-}
-```
-
-### 3. Simulere innkommende SMS (Injisering)
-
-Brukt for å simulere at en leietaker svarer eller sender en melding:
-
-- **Endepunkt**: `POST /messages/inbound` (alias: `POST /simulate/inbound`)
-- **Body**:
-
-```json
-{
-  "from": "+4799887766",
-  "text": "Hei, er det mulig å få to ekstra bord?"
-}
-```
-
-### 4. Inspisere og hente meldinger
-
-- **Alle meldinger**: `GET /messages` (støtter filtere: `?direction=inbound|outbound`, `?to=...`, `?from=...`)
-- **Enkeltmelding etter ID**: `GET /messages/:id`
-
-### 5. Hendelseslogger
-
-- **Hente logger**: `GET /api/logs` (eller `GET /logs`)
-- **Tømme logger**: `DELETE /logs`
-
-### 6. Nullstille tilstand (Reset)
-
-Slett alle lagrede meldinger i minnet:
-
-- **Endepunkt**: `DELETE /messages`
+| Metode & Sti              | Beskrivelse                                                      |
+| :------------------------ | :--------------------------------------------------------------- |
+| `GET /`                   | Web Frontend Dashboard (HTML)                                    |
+| `GET /health`             | Helseendepunkt (`200 OK`)                                        |
+| `POST /messages/outbound` | Sende utgående SMS fra SMS-tjenesten                             |
+| `POST /messages/inbound`  | Simulere innkommende SMS fra leietaker                           |
+| `GET /messages`           | Hente alle meldinger (støtter filter: `direction`, `to`, `from`) |
+| `GET /messages/:id`       | Hente enkeltmelding etter ID                                     |
+| `DELETE /messages`        | Nullstille alle meldinger i minnet                               |
+| `GET /api/logs`           | Hente nylige server- og webhook-hendelser                        |
+| `DELETE /logs`            | Tømme hendelsesloggen                                            |
 
 ---
 
-## Testing & Kvalitetssikring
+## Testing
 
-### Enhetstester & Rutetester
-
-Kjør de lokale enhets- og API-testene:
+For fullstendig veiledning og manuelle testscenarier, se **[TESTING.md](TESTING.md)**.
 
 ```bash
+# Kjør lokale enhets- og rutetester
 npm test
-```
 
-### Ende-til-ende (E2E) integrasjonstester
-
-Når Docker Compose-stacken kjører (`docker compose up -d`), kan hele meldingsflyten verifiseres med:
-
-```bash
+# Kjør automatiserte E2E-integrasjonstester mot Docker Compose-stacken
 npm run test:e2e
-```
 
-Kjør alle tester:
-
-```bash
+# Kjør alle tester
 npm run test:all
-```
 
-### Linting og formatering
-
-```bash
+# Linting og kodeformatering
 npm run lint
-npm run format
 npm run format:check
 ```
