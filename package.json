@@ -1,6 +1,6 @@
 {
   "name": "snippen-testing",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Integration test harness for Snippen booking and SMS service",
   "main": "src/server.js",
   "type": "module",
@@ -10,8 +10,10 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "test": "node --test",
-    "test:watch": "node --test --watch",
+    "test": "node --test test/*.test.js",
+    "test:e2e": "node --test test/e2e/**/*.test.js",
+    "test:all": "node --test test/**/*.test.js",
+    "test:watch": "node --test --watch test/*.test.js",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

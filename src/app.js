@@ -1,11 +1,22 @@
 import { MessageStore } from "./message-store.js";
+import { EventLogger } from "./event-logger.js";
 import { loadConfig } from "./config.js";
+import { renderDashboardHtml } from "./dashboard-html.js";
 
 function sendJson(res, statusCode, data) {
   const body = JSON.stringify(data);
   res.writeHead(statusCode, {
     "Content-Type": "application/json; charset=utf-8",
     "Content-Length": Buffer.byteLength(body),
+  });
+  res.end(body);
+}
+
+function sendHtml(res, statusCode, html) {
+  const body = Buffer.from(html, "utf-8");
+  res.writeHead(statusCode, {
+    "Content-Type": "text/html; charset=utf-8",
+    "Content-Length": body.length,
   });
   res.end(body);
 }
@@ -75,13 +86,26 @@ export function createApp(
   config = loadConfig(),
   store = new MessageStore(),
   webhookDispatcher = dispatchWebhook,
+  logger = new EventLogger(),
 ) {
   return async function requestListener(req, res) {
     try {
       const url = new URL(req.url, `http://${req.headers.host ?? "localhost"}`);
       const pathname = url.pathname;
 
-      // 1. Health check
+      // 1. Dashboard Web UI (Root path)
+      if (pathname === "/" || pathname === "/dashboard") {
+        if (req.method === "GET") {
+          sendHtml(res, 200, renderDashboardHtml());
+          return;
+        }
+
+        res.setHeader("Allow", "GET");
+        sendJson(res, 405, { error: "Method Not Allowed" });
+        return;
+      }
+
+      // 2. Health check
       if (pathname === "/health") {
         if (req.method === "GET") {
           sendJson(res, 200, {
@@ -97,7 +121,34 @@ export function createApp(
         return;
       }
 
-      // 2. Outgoing SMS (send operation)
+      // 3. Activity / Event Logs: GET /logs or /api/logs
+      if (pathname === "/logs" || pathname === "/api/logs") {
+        if (req.method === "GET") {
+          const limit = parseInt(url.searchParams.get("limit") || "50", 10);
+          const type = url.searchParams.get("type") || null;
+          const events = logger.getEvents({ limit, type });
+          sendJson(res, 200, {
+            events,
+            count: events.length,
+          });
+          return;
+        }
+
+        if (req.method === "DELETE") {
+          const cleared = logger.clear();
+          sendJson(res, 200, {
+            message: "All logs cleared",
+            count: cleared,
+          });
+          return;
+        }
+
+        res.setHeader("Allow", "GET, DELETE");
+        sendJson(res, 405, { error: "Method Not Allowed" });
+        return;
+      }
+
+      // 4. Outgoing SMS (send operation)
       if (
         pathname === "/messages/outbound" ||
         pathname === "/api/sms/send" ||
@@ -143,6 +194,12 @@ export function createApp(
             metadata: body.metadata ?? {},
           });
 
+          logger.log({
+            type: "outbound",
+            message: `Utgående SMS til ${message.to}: "${message.text}"`,
+            details: { id: message.id, from: message.from, to: message.to },
+          });
+
           sendJson(res, 201, message);
           return;
         }
@@ -152,7 +209,7 @@ export function createApp(
         return;
       }
 
-      // 3. Simulated Incoming SMS
+      // 5. Simulated Incoming SMS
       if (
         pathname === "/messages/inbound" ||
         pathname === "/simulate/inbound" ||
@@ -194,6 +251,12 @@ export function createApp(
             metadata: body.metadata ?? {},
           });
 
+          logger.log({
+            type: "inbound",
+            message: `Innkommende SMS fra ${message.from}: "${message.text}"`,
+            details: { id: message.id, from: message.from, to: message.to },
+          });
+
           const webhookResult = await webhookDispatcher(
             config.smsServiceWebhookUrl,
             {
@@ -205,6 +268,17 @@ export function createApp(
               metadata: message.metadata,
             },
           );
+
+          logger.log({
+            type: "webhook",
+            message: `Webhook dispatch til ${config.smsServiceWebhookUrl}: ${
+              webhookResult.delivered
+                ? `Vellykket (HTTP ${webhookResult.status})`
+                : `Feilet (${webhookResult.error})`
+            }`,
+            level: webhookResult.delivered ? "info" : "warn",
+            details: webhookResult,
+          });
 
           sendJson(res, 201, {
             message,
@@ -221,7 +295,7 @@ export function createApp(
         return;
       }
 
-      // 4. Message collection endpoints: GET /messages, DELETE /messages, POST /messages
+      // 6. Message collection endpoints: GET /messages, DELETE /messages, POST /messages
       if (pathname === "/messages" || pathname === "/api/messages") {
         if (req.method === "GET") {
           const direction = url.searchParams.get("direction") ?? undefined;
@@ -244,6 +318,10 @@ export function createApp(
 
         if (req.method === "DELETE") {
           const clearedCount = store.clear();
+          logger.log({
+            type: "reset",
+            message: `Meldingstilstand nullstilt (${clearedCount} meldinger slettet)`,
+          });
           sendJson(res, 200, {
             message: "All messages cleared",
             count: clearedCount,
@@ -288,6 +366,12 @@ export function createApp(
               metadata: body.metadata ?? {},
             });
 
+            logger.log({
+              type: "inbound",
+              message: `Innkommende SMS fra ${message.from}: "${message.text}"`,
+              details: { id: message.id, from: message.from, to: message.to },
+            });
+
             const webhookResult = await webhookDispatcher(
               config.smsServiceWebhookUrl,
               {
@@ -299,6 +383,17 @@ export function createApp(
                 metadata: message.metadata,
               },
             );
+
+            logger.log({
+              type: "webhook",
+              message: `Webhook dispatch til ${config.smsServiceWebhookUrl}: ${
+                webhookResult.delivered
+                  ? `Vellykket (HTTP ${webhookResult.status})`
+                  : `Feilet (${webhookResult.error})`
+              }`,
+              level: webhookResult.delivered ? "info" : "warn",
+              details: webhookResult,
+            });
 
             sendJson(res, 201, {
               message,
@@ -339,6 +434,12 @@ export function createApp(
             metadata: body.metadata ?? {},
           });
 
+          logger.log({
+            type: "outbound",
+            message: `Utgående SMS til ${message.to}: "${message.text}"`,
+            details: { id: message.id, from: message.from, to: message.to },
+          });
+
           sendJson(res, 201, message);
           return;
         }
@@ -348,7 +449,7 @@ export function createApp(
         return;
       }
 
-      // 5. Single message lookup: GET /messages/:id or /api/messages/:id
+      // 7. Single message lookup: GET /messages/:id or /api/messages/:id
       const messageIdMatch = pathname.match(
         /^\/(?:api\/)?messages\/([a-zA-Z0-9_-]+)$/,
       );
@@ -371,7 +472,7 @@ export function createApp(
         return;
       }
 
-      // 6. Unknown route
+      // 8. Unknown route
       sendJson(res, 404, { error: "Not Found" });
     } catch (err) {
       console.error(
