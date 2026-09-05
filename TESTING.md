@@ -12,8 +12,24 @@ Når hele stacken kjører med Docker Compose (`docker compose up -d`), er følge
 | :--------------------------- | :----------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------- |
 | **Fake SMS Dashboard**       | [http://localhost:3000](http://localhost:3000)                                                                                 | Ingen innlogging nødvendig. Sanntidsvisning av meldinger, logger og SMS-simulator. |
 | **Snippen Booking Admin**    | [http://localhost:8080/wp-admin/](http://localhost:8080/wp-admin/)                                                             | **Brukernavn:** `admin`<br>**Passord:** `admin`                                    |
-| **Snippen Booking Oversikt** | [http://localhost:8080/wp-admin/admin.php?page=snippen-booking](http://localhost:8080/wp-admin/admin.php?page=snippen-booking) | Booking-liste og kommunikasjonshistorikk for hver booking.                         |
-| **WordPress Forside**        | [http://localhost:8080/](http://localhost:8080/)                                                                               | Beboerinnlogging: `test.guest` / `demo123` (Telefon: `+4799887766`).               |
+| **Snippen Booking Oversikt** | [http://localhost:8080/wp-admin/admin.php?page=snippen-booking](http://localhost:8080/wp-admin/admin.php?page=snippen-booking) | Administrasjon av alle reservasjoner og kommunikasjonshistorikk.                   |
+| **Felleskalender (Forside)** | [http://localhost:8080/](http://localhost:8080/)                                                                               | Komplett bookingkalender for alle lokaler.                                         |
+| **Festsalen Booking**        | [http://localhost:8080/booking-demo-festsalen/](http://localhost:8080/booking-demo-festsalen/)                                 | Dedikert bookingside for Festsalen.                                                |
+| **Peisestuen Booking**       | [http://localhost:8080/booking-demo-peisestuen/](http://localhost:8080/booking-demo-peisestuen/)                               | Dedikert bookingside for Peisestuen.                                               |
+| **Aktivering av konto**      | [http://localhost:8080/booking-demo-aktivering-av-konto/](http://localhost:8080/booking-demo-aktivering-av-konto/)             | Aktiveringsskjema for beboere med mine bookinger.                                  |
+| **Vilkår for leie**          | [http://localhost:8080/booking-demo-vilkar-for-leie/](http://localhost:8080/booking-demo-vilkar-for-leie/)                     | Leievilkår og regler for Snippen.                                                  |
+
+---
+
+## Forhåndsutfylte Beboer-Testbrukere
+
+Følgende testbrukere opprettes automatisk med tilhørende bookinger og telefonnumre:
+
+| Brukernavn      | Passord   | Navn                    | Telefonnummer | Formål                                          |
+| :-------------- | :-------- | :---------------------- | :------------ | :---------------------------------------------- |
+| `test.guest`    | `demo123` | Ola Nordmann (E2E Test) | `+4799887766` | Hovedbruker for E2E-tester og adgangskode-flyt. |
+| `kari.nordmann` | `demo123` | Kari Nordmann (Test)    | `+4799887767` | Testbruker med booking i Peisestuen.            |
+| `per.hansen`    | `demo123` | Per Hansen (Test)       | `+4799887768` | Testbruker med styremøte-booking i Festsalen.   |
 
 ---
 
@@ -25,7 +41,7 @@ Dette scenariet tester at en innkommende SMS fra en leietaker mottas i simulator
 
 1. **Åpne Test Dashboardet**: Gå til [http://localhost:3000](http://localhost:3000).
 2. **Send en innkommende SMS**:
-   - I **SMS-simulator**-skjemaet på venstre side er avsender forhåndsutfylt med testbeboerens nummer: `+4799887766`.
+   - I **SMS-simulator**-skjemaet på venstre side er avsender forhåndsutfylt med testbeboerens nummer: `+4799887766` (eller bytt til `+4799887767` for Kari Nordmann).
    - Skriv en meldingstekst, eller klikk på en hurtigmal (f.eks. _"Takk for koden!"_ eller _"Kan vi få to ekstra bord?"_).
    - Klikk på **📤 Send innkommende SMS**.
 3. **Observer flyten i Dashboardet**:
@@ -33,18 +49,32 @@ Dette scenariet tester at en innkommende SMS fra en leietaker mottas i simulator
    - Hendelsesloggen viser at meldingen er registrert og at webhook-leveransen til `snippen-sms-service` er utført.
 4. **Verifiser i Snippen Booking**:
    - Åpne [Snippen Booking Oversikt](http://localhost:8080/wp-admin/admin.php?page=snippen-booking).
-   - Finn bookingen for **Ola Nordmann (E2E Test)** og åpne/utvid raden.
+   - Finn bookingen for brukeren og åpne/utvid raden.
    - Under **Kommunikasjonshistorikk** vil du se at leietakerens SMS har blitt mottatt og automatisk knyttet til den aktuelle bookingen.
 
 ---
 
-### 2. Teste Utgående SMS fra Snippen Booking til Dashboardet
+### 2. Teste Opprettelse av Ny Booking via Nettsiden
+
+Dette scenariet tester opprettelse av en booking fra en av de genererte test-sidene:
+
+1. **Gå til bookingsiden**: Åpne f.eks. [Booking Demo - Festsalen](http://localhost:8080/booking-demo-festsalen/) eller forsiden [http://localhost:8080/](http://localhost:8080/).
+2. **Logg inn eller fyll ut skjemaet**:
+   - Logg inn med en av testbrukerne (f.eks. `kari.nordmann` / `demo123`), eller fyll inn kontaktinformasjon.
+   - Velg en ledig dato i kalenderen og send inn reservasjon.
+3. **Se bekreftelse og utgående SMS**:
+   - Reservasjonen dukker opp i [Booking Oversikt i WP-Admin](http://localhost:8080/wp-admin/admin.php?page=snippen-booking).
+   - Eventuelle utsendte SMS-bekreftelser fanges automatisk opp og vises i [Fake SMS Dashboard](http://localhost:3000).
+
+---
+
+### 3. Teste Utgående SMS fra Snippen Booking til Dashboardet
 
 Dette scenariet tester at en SMS generert av booking-pluginen sendes via SMS-tjenesten og fanges opp av Fake SMS Provider.
 
 1. **Send eller trigg en SMS fra WordPress**:
    - Gå inn på [Snippen Booking Oversikt](http://localhost:8080/wp-admin/admin.php?page=snippen-booking).
-   - Utfør en handling som genererer en SMS (eller opprett/bekreft en booking for testbrukeren med telefon `+4799887766`).
+   - Utfør en handling som genererer en SMS (eller godkjenn/oppdater en booking for testbrukeren med telefon `+4799887766`).
 2. **Observer levering i Fake SMS Dashboard**:
    - I [Test Dashboard](http://localhost:3000) vil meldingen dukke opp under **Meldinger** merket **📤 UTGÅENDE** innen få sekunder.
    - `snippen-sms-service` rapporterer automatisk statusen tilbake til WordPress slik at meldingen markeres som levert/sendt i kommunikasjonshistorikken i WordPress.
@@ -112,10 +142,11 @@ npm run lint
 
 ## Docker Compose Hjelpekommandoer
 
-| Handling                                 | Kommando                                                                                                                               |
-| :--------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------- |
-| **Starte hele stacken**                  | `docker compose up --build -d`                                                                                                         |
-| **Følge sanntidslogger**                 | `docker compose logs -f`                                                                                                               |
-| **Logger for spesifikk tjeneste**        | `docker compose logs -f fake-sms-provider`<br>`docker compose logs -f snippen-sms-service`<br>`docker compose logs -f snippen-booking` |
-| **Nullstille meldinger i Fake Provider** | `curl -X DELETE http://localhost:3000/messages` (eller via knappen i Dashboardet)                                                      |
-| **Stoppe stacken**                       | `docker compose down`                                                                                                                  |
+| Handling                                   | Kommando                                                                                                                               |
+| :----------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------- |
+| **Starte hele stacken**                    | `docker compose up --build -d`                                                                                                         |
+| **Følge sanntidslogger**                   | `docker compose logs -f`                                                                                                               |
+| **Logger for spesifikk tjeneste**          | `docker compose logs -f fake-sms-provider`<br>`docker compose logs -f snippen-sms-service`<br>`docker compose logs -f snippen-booking` |
+| **Nullstille meldinger i Fake Provider**   | `curl -X DELETE http://localhost:3000/messages` (eller via knappen i Dashboardet)                                                      |
+| **Kjøre demo-oppsett manuelt i WordPress** | `docker exec snippen-booking composer demo:gateway`                                                                                    |
+| **Stoppe stacken**                         | `docker compose down`                                                                                                                  |
