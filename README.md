@@ -2,29 +2,31 @@
 
 Test-oppsett for integrasjons- og ende-til-ende-testing av Snippen-økosystemet (`snippen-booking` og `snippen-sms-service`).
 
-Repositoryet inneholder en **Fake SMS Provider** som erstatter eksterne SMS-leverandører under lokal utvikling og automatiserte integrasjonstester. Dette gjør det mulig å verifisere hele meldingsflyten uten å sende reelle SMS eller være avhengig av eksterne tredjepartstjenester.
+Repositoryet inneholder en **Fake SMS Provider** og et interaktivt **Web Dashboard** som erstatter eksterne SMS-leverandører under lokal utvikling og automatiserte integrasjonstester. Dette gjør det mulig å verifisere hele meldingsflyten uten å sende reelle SMS eller være avhengig av eksterne tredjepartstjenester.
 
-## Arkitektur
+## Arkitektur & Kommunikasjonsflyt
 
 ```text
 ┌─────────────────┐
-│ snippen-booking │
+│ snippen-booking │ (WordPress + MariaDB: port 8080)
 └────────┬────────┘
-         │ HTTP
+         │ HTTP (/wp-json/snippen/v1/sms/...)
          ▼
 ┌─────────────────────┐
-│ snippen-sms-service │
+│ snippen-sms-service │ (Python gateway daemon)
 └──────────┬──────────┘
-           │ SMS API / Webhook
+           │ SMS API (POST /messages/outbound) & Polling (GET /messages?direction=inbound)
            ▼
 ┌─────────────────────┐
-│  Fake SMS Provider  │  <─── Test suite (injiser/inspiser/nullstill)
+│  Fake SMS Provider  │ <─── Web Frontend Dashboard (GET / på port 3000)
+│  (snippen-testing)  │ <─── E2E Test Suite (npm run test:e2e)
 └─────────────────────┘
 ```
 
-- **Utgående SMS**: `snippen-sms-service` sender SMS til fake provider via HTTP. Meldingen lagres i minnet og tildeles en unik ID.
-- **Innkommende SMS**: Tester kan simulere innkommende SMS fra en leietaker. Fake provider lagrer meldingen og kaller webhook-endepunktet til `snippen-sms-service`.
-- **Inspeksjon & Nullstilling**: Testsuiter kan hente lagrede meldinger filtrert på retning/avsender/mottaker, eller nullstille all tilstand mellom tester.
+- **Utgående SMS**: `snippen-booking` legger meldinger i utboksen. `snippen-sms-service` henter utgående meldinger og sender dem til Fake Provider (`POST /messages/outbound`). Status rapporteres tilbake til Booking som `sent`.
+- **Innkommende SMS**: Meldinger injiseres i Fake Provider via Web Dashboard eller API (`POST /messages/inbound`). `snippen-sms-service` poller innkommende meldinger, slår opp leietaker/booking-kontekst, og synkroniserer meldingen inn i `snippen-booking` (`POST /wp-json/snippen/v1/sms/inbox`).
+- **Web Frontend Dashboard**: Gir sanntidsoversikt over meldingsstrømmen, hendelseslogger og et interaktivt simulatorskjema for manuell testing.
+- **Inspeksjon & Nullstilling**: Testsuiter og utviklere kan hente lagrede meldinger og logger, samt nullstille tilstand mellom tester (`DELETE /messages`).
 
 ---
 
@@ -38,7 +40,27 @@ Repositoryet inneholder en **Fake SMS Provider** som erstatter eksterne SMS-leve
 
 ## Hurtigstart
 
-### Kjøre lokalt
+### Kjøre full stack med Docker Compose
+
+Start hele stacken (`fake-sms-provider`, `snippen-booking` og `snippen-sms-service`):
+
+```bash
+docker compose up --build -d
+```
+
+Når containerne er oppe og sunne (`healthy`):
+
+- **Web Frontend Dashboard**: Åpne `http://localhost:3000` i nettleseren.
+- **Snippen Booking**: Tilgjengelig på `http://localhost:8080`.
+- **Logger**: Følg sanntidslogger med `docker compose logs -f`.
+
+Stopp hele stacken:
+
+```bash
+docker compose down
+```
+
+### Kjøre Fake SMS Provider lokalt
 
 Installer avhengigheter og start HTTP-tjenesten:
 
@@ -53,26 +75,6 @@ For utvikling med automatisk omstart ved filendringer:
 npm run dev
 ```
 
-### Kjøre med Docker Compose
-
-Start Fake SMS Provider som en container-tjeneste:
-
-```bash
-docker compose up -d
-```
-
-Sjekk logger:
-
-```bash
-docker compose logs -f
-```
-
-Stopp tjenesten:
-
-```bash
-docker compose down
-```
-
 ### Utvikling i Dev Container
 
 Repositoryet inneholder en ferdig Dev Container-konfigurasjon (`.devcontainer/devcontainer.json`) for VS Code og GitHub Codespaces.
@@ -80,6 +82,17 @@ Repositoryet inneholder en ferdig Dev Container-konfigurasjon (`.devcontainer/de
 1. Åpne prosjektmappen i VS Code.
 2. Trykk `F1` og velg **Dev Containers: Reopen in Container**.
 3. VS Code bygger og starter containeren med alle nødvendige verktøy (Node.js, npm, Git, ESLint, Prettier og Docker CLI).
+
+---
+
+## Web Frontend Dashboard
+
+Når Fake SMS Provider kjører, kan du åpne `http://localhost:3000` for å få tilgang til Web Dashboardet:
+
+1. **Meldingsfeed**: Se alle innkommende og utgående meldinger i sanntid med avsender, mottaker, innhold, status og tidsstempel.
+2. **SMS-simulator**: Send en simulert innkommende SMS fra et gitt telefonnummer med forhåndsdefinerte hurtigmaler.
+3. **Hendelseslogg**: Følg med på serverhendelser, innkommende forespørsler og webhook-kall.
+4. **Tilstandsstyring**: Nullstill alle meldinger med ett klikk for å klargjøre systemet til nye tester.
 
 ---
 
@@ -98,24 +111,14 @@ Tjenesten konfigureres via miljøvariabler:
 
 ## API-dokumentasjon
 
-### 1. Helseendepunkt
+### 1. Dashboard & Helse
 
-Sjekk om tjenesten kjører.
-
-- **Endepunkt**: `GET /health`
-- **Respons** (`200 OK`):
-
-```json
-{
-  "status": "ok",
-  "uptime": 12.34,
-  "timestamp": "2026-08-30T18:30:00.000Z"
-}
-```
+- **Dashboard UI**: `GET /` (returnerer HTML)
+- **Helseendepunkt**: `GET /health` (`200 OK` med `status`, `uptime`, `timestamp`)
 
 ### 2. Sende utgående SMS (Fake Provider Send API)
 
-Brukt av `snippen-sms-service` for å sende en SMS til en mottaker.
+Brukt av `snippen-sms-service` for å levere en SMS:
 
 - **Endepunkt**: `POST /messages/outbound` (alias: `POST /sms/send`, `POST /messages`)
 - **Body**:
@@ -127,24 +130,9 @@ Brukt av `snippen-sms-service` for å sende en SMS til en mottaker.
 }
 ```
 
-- **Respons** (`201 Created`):
-
-```json
-{
-  "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
-  "direction": "outbound",
-  "to": "+4799887766",
-  "from": "Snippen",
-  "text": "Din adgangskode til Snippen er 4821",
-  "status": "sent",
-  "createdAt": "2026-08-30T18:31:00.000Z",
-  "metadata": {}
-}
-```
-
 ### 3. Simulere innkommende SMS (Injisering)
 
-Brukt av automatiserte integrasjonstester for å simulere at en leietaker sender en SMS. Tjenesten lagrer meldingen og videresender den via webhook til `snippen-sms-service`.
+Brukt for å simulere at en leietaker svarer eller sender en melding:
 
 - **Endepunkt**: `POST /messages/inbound` (alias: `POST /simulate/inbound`)
 - **Body**:
@@ -156,134 +144,52 @@ Brukt av automatiserte integrasjonstester for å simulere at en leietaker sender
 }
 ```
 
-- **Respons** (`201 Created`):
+### 4. Inspisere og hente meldinger
 
-```json
-{
-  "message": {
-    "id": "e3b0c442-98fc-1c14-9afbf4c8996fb924",
-    "direction": "inbound",
-    "from": "+4799887766",
-    "to": null,
-    "text": "Hei, er det mulig å få to ekstra bord?",
-    "status": "received",
-    "createdAt": "2026-08-30T18:32:00.000Z",
-    "metadata": {}
-  },
-  "webhook": {
-    "url": "http://127.0.0.1:3001/webhook/sms",
-    "delivered": true,
-    "status": 200,
-    "error": null
-  }
-}
-```
+- **Alle meldinger**: `GET /messages` (støtter filtere: `?direction=inbound|outbound`, `?to=...`, `?from=...`)
+- **Enkeltmelding etter ID**: `GET /messages/:id`
 
-### 4. Inspisere meldinger
+### 5. Hendelseslogger
 
-Hent alle lagrede meldinger med støtte for filtrering.
-
-- **Endepunkt**: `GET /messages`
-- **Filter-parametere** (valgfritt):
-  - `direction`: `inbound` eller `outbound`
-  - `to`: Mottakertelefonnummer
-  - `from`: Avsendertelefonnummer
-
-Eksempel:
-
-```bash
-# Hent alle utgående meldinger
-curl "http://localhost:3000/messages?direction=outbound"
-
-# Hent meldinger til et spesifikt nummer
-curl "http://localhost:3000/messages?to=%2B4799887766"
-```
-
-- **Respons** (`200 OK`):
-
-```json
-{
-  "messages": [
-    {
-      "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
-      "direction": "outbound",
-      "to": "+4799887766",
-      "from": "Snippen",
-      "text": "Din adgangskode til Snippen er 4821",
-      "status": "sent",
-      "createdAt": "2026-08-30T18:31:00.000Z",
-      "metadata": {}
-    }
-  ],
-  "count": 1
-}
-```
-
-### 5. Hente enkeltmelding etter ID
-
-- **Endepunkt**: `GET /messages/:id`
-- **Respons** (`200 OK`):
-
-```json
-{
-  "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
-  "direction": "outbound",
-  "to": "+4799887766",
-  "from": "Snippen",
-  "text": "Din adgangskode til Snippen er 4821",
-  "status": "sent",
-  "createdAt": "2026-08-30T18:31:00.000Z",
-  "metadata": {}
-}
-```
-
-Dersom meldingen ikke finnes: `404 Not Found` med `{"error": "Message not found"}`.
+- **Hente logger**: `GET /api/logs` (eller `GET /logs`)
+- **Tømme logger**: `DELETE /logs`
 
 ### 6. Nullstille tilstand (Reset)
 
-Slett alle lagrede meldinger i minnet for å klargjøre provideren før eller etter en test.
+Slett alle lagrede meldinger i minnet:
 
 - **Endepunkt**: `DELETE /messages`
-- **Respons** (`200 OK`):
-
-```json
-{
-  "message": "All messages cleared",
-  "count": 5
-}
-```
 
 ---
 
 ## Testing & Kvalitetssikring
 
-Kjør automatiserte tester med Node.js innebygde test-runner:
+### Enhetstester & Rutetester
+
+Kjør de lokale enhets- og API-testene:
 
 ```bash
 npm test
 ```
 
-For kontinuerlig testkjøring:
+### Ende-til-ende (E2E) integrasjonstester
+
+Når Docker Compose-stacken kjører (`docker compose up -d`), kan hele meldingsflyten verifiseres med:
 
 ```bash
-npm run test:watch
+npm run test:e2e
 ```
 
-Kjør linting og formatering:
+Kjør alle tester:
+
+```bash
+npm run test:all
+```
+
+### Linting og formatering
 
 ```bash
 npm run lint
 npm run format
 npm run format:check
-```
-
----
-
-## Docker
-
-Bygg og kjør applikasjonen i en frittstående Docker-container:
-
-```bash
-docker build -t snippen-testing .
-docker run -p 3000:3000 snippen-testing
 ```

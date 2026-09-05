@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: fake-sms-provider
     ports:
       - "${PORT:-3000}:3000"
     environment:
@@ -10,6 +11,8 @@ services:
       PORT: 3000
       HOST: 0.0.0.0
       SMS_SERVICE_WEBHOOK_URL: ${SMS_SERVICE_WEBHOOK_URL:-http://snippen-sms-service:3000/webhook/sms}
+    networks:
+      - snippen-net
     healthcheck:
       test:
         [
@@ -22,3 +25,51 @@ services:
       timeout: 3s
       retries: 3
       start_period: 2s
+
+  snippen-booking:
+    build:
+      context: ../snippen-booking
+      dockerfile: Dockerfile
+    container_name: snippen-booking
+    user: root
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: 8080
+      INIT_GATEWAY: "true"
+      SNIPPEN_SMS_API_TOKEN: ${SNIPPEN_SMS_API_TOKEN:-test-integration-token}
+      SNIPPEN_SMS_SENDER: Snippen
+    networks:
+      - snippen-net
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  snippen-sms-service:
+    build:
+      context: ../snippen-sms-service
+      dockerfile: Dockerfile
+    container_name: snippen-sms-service
+    environment:
+      SNIPPEN_SMS_PROVIDER: http
+      SNIPPEN_SMS_PROVIDER_URL: http://fake-sms-provider:3000
+      SNIPPEN_SMS_API_URL: http://snippen-booking:8080/wp-json/snippen/v1/sms
+      SNIPPEN_SMS_API_TOKEN: ${SNIPPEN_SMS_API_TOKEN:-test-integration-token}
+      SNIPPEN_SMS_POLL_INTERVAL: "1.0"
+      SNIPPEN_SMS_SYNC_INTERVAL: "1.0"
+      SNIPPEN_SMS_LOG_LEVEL: INFO
+      SNIPPEN_SMS_CHECK_UPDATES_ON_STARTUP: "false"
+    depends_on:
+      fake-sms-provider:
+        condition: service_healthy
+      snippen-booking:
+        condition: service_healthy
+    networks:
+      - snippen-net
+
+networks:
+  snippen-net:
+    driver: bridge
