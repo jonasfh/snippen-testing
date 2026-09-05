@@ -27,7 +27,7 @@
       }
     }
   },
-  "forwardPorts": [3000],
+  "forwardPorts": [3000, 8080],
   "postCreateCommand": "sudo chown -R node:node /home/node/.gemini && npm install",
   "remoteUser": "node",
   "mounts": [
