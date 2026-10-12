@@ -17,7 +17,9 @@
         "esbenp.prettier-vscode",
         "ms-azuretools.vscode-docker"
       ],
-      "recommendations": ["google.google-antigravity"],
+      "recommendations": [
+        "google.google-antigravity"
+      ],
       "settings": {
         "editor.defaultFormatter": "esbenp.prettier-vscode",
         "editor.formatOnSave": true,
@@ -27,7 +29,6 @@
       }
     }
   },
-  "forwardPorts": [3000, 8080],
   "postCreateCommand": "sudo chown -R node:node /home/node/.gemini && npm install",
   "remoteUser": "node",
   "mounts": [
