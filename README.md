@@ -1,8 +1,8 @@
 # Snippen Testing
 
-Test-oppsett for integrasjons- og ende-til-ende-testing av Snippen-økosystemet (`snippen-booking` og `snippen-sms-service`).
+Test-oppsett for integrasjons- og ende-til-ende-testing av Snippen-økosystemet (`snippen-booking`, `snippen-sms-service` og `snippen-doorman-service`).
 
-Repositoryet inneholder en **Fake SMS Provider** og et interaktivt **Web Dashboard** som erstatter eksterne SMS-leverandører under lokal utvikling og automatiserte integrasjonstester. Dette gjør det mulig å verifisere hele meldingsflyten uten å sende reelle SMS eller være avhengig av eksterne tredjepartstjenester.
+Repositoryet inneholder en **Fake SMS Provider** og et interaktivt **Web Dashboard** som erstatter eksterne SMS-leverandører under lokal utvikling og automatiserte integrasjonstester. Dette gjør det mulig å verifisere hele meldingsflyten og adgangskontrollen uten å sende reelle SMS eller være avhengig av eksterne tredjepartstjenester.
 
 > 📖 **Detaljert testguide**: For en grundig gjennomgang av webadresser, innloggingsdetaljer og manuelle testscenarier, se **[TESTING.md](TESTING.md)**.
 
@@ -13,9 +13,14 @@ Repositoryet inneholder en **Fake SMS Provider** og et interaktivt **Web Dashboa
 ```text
 ┌─────────────────┐
 │ snippen-booking │ (WordPress + MariaDB: port 8080)
-└────────┬────────┘
-         │ HTTP (/wp-json/snippen/v1/sms/...)
-         ▼
+└────┬───────┬────┘
+     │       │ REST (/wp-json/snippen/v1/door/...)
+     │       ▼
+     │ ┌─────────────────────────┐
+     │ │ snippen-doorman-service │ (Python daemon: auto PIN & synkronisering)
+     │ └─────────────────────────┘
+     │ REST (/wp-json/snippen/v1/sms/...)
+     ▼
 ┌─────────────────────┐
 │ snippen-sms-service │ (Python gateway daemon)
 └──────────┬──────────┘
@@ -27,7 +32,8 @@ Repositoryet inneholder en **Fake SMS Provider** og et interaktivt **Web Dashboa
 └─────────────────────┘
 ```
 
-- **Utgående SMS**: `snippen-booking` legger meldinger i utboksen. `snippen-sms-service` henter utgående meldinger og sender dem til Fake Provider (`POST /messages/outbound`). Status rapporteres tilbake til Booking som `sent`.
+- **Adgangskontroll & Dørkoder**: `snippen-doorman-service` poller aktive reservasjoner fra `snippen-booking` (`GET /wp-json/snippen/v1/door/bookings`). Dersom en reservasjon mangler dørkode, genereres en 6-sifret sikker PIN som lagres lokalt i SQLite og patches tilbake til WordPress (`PATCH /wp-json/snippen/v1/door/bookings/:id/code`).
+- **Utgående SMS**: `snippen-booking` legger meldinger i utboksen (inkludert tildelt dørkode for bekreftelser/påminnelser). `snippen-sms-service` henter utgående meldinger og sender dem til Fake Provider (`POST /messages/outbound`). Status rapporteres tilbake til Booking som `sent`.
 - **Innkommende SMS**: Meldinger injiseres i Fake Provider via Web Dashboard eller API (`POST /messages/inbound`). `snippen-sms-service` poller innkommende meldinger, slår opp leietaker/booking-kontekst, og synkroniserer meldingen inn i `snippen-booking` (`POST /wp-json/snippen/v1/sms/inbox`).
 - **Web Frontend Dashboard**: Gir sanntidsoversikt over meldingsstrømmen, hendelseslogger og et interaktivt simulatorskjema for manuell testing.
 - **Inspeksjon & Nullstilling**: Testsuiter og utviklere kan hente lagrede meldinger og logger, samt nullstille tilstand mellom tester (`DELETE /messages`).
@@ -46,7 +52,7 @@ Repositoryet inneholder en **Fake SMS Provider** og et interaktivt **Web Dashboa
 
 ### Kjøre full stack med Docker Compose
 
-Start hele stacken (`fake-sms-provider`, `snippen-booking` og `snippen-sms-service`):
+Start hele stacken (`fake-sms-provider`, `snippen-booking`, `snippen-sms-service` og `snippen-doorman-service`):
 
 ```bash
 docker compose up --build -d
@@ -135,6 +141,9 @@ npm test
 
 # Kjør automatiserte E2E-integrasjonstester mot Docker Compose-stacken
 npm run test:e2e
+
+# Kjør kun Doorman Service E2E-integrasjonstester
+npm run test:e2e:doorman
 
 # Kjør alle tester
 npm run test:all

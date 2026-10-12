@@ -39,6 +39,7 @@ services:
       INIT_GATEWAY: "true"
       SNIPPEN_SMS_API_TOKEN: ${SNIPPEN_SMS_API_TOKEN:-test-integration-token}
       SNIPPEN_SMS_SENDER: Snippen
+      SNIPPEN_DOORMAN_API_TOKEN: ${SNIPPEN_DOORMAN_API_TOKEN:-test-integration-token}
     networks:
       - snippen-net
     healthcheck:
@@ -65,6 +66,27 @@ services:
     depends_on:
       fake-sms-provider:
         condition: service_healthy
+      snippen-booking:
+        condition: service_healthy
+    networks:
+      - snippen-net
+
+  snippen-doorman-service:
+    build:
+      context: ../snippen-doorman-service
+      dockerfile: Dockerfile
+    container_name: snippen-doorman-service
+    command: ["snippen-doorman", "service", "run", "--interval", "1.0"]
+    environment:
+      PYTHONUNBUFFERED: "1"
+      SNIPPEN_DOORMAN_API_URL: http://snippen-booking:8080/wp-json/snippen/v1/door
+      SNIPPEN_DOORMAN_API_TOKEN: ${SNIPPEN_DOORMAN_API_TOKEN:-test-integration-token}
+      SNIPPEN_DOORMAN_SYNC_INTERVAL: "1.0"
+      SNIPPEN_DOORMAN_SYNC_TIMEOUT: "10.0"
+      SNIPPEN_DOORMAN_STORAGE_TYPE: sqlite
+      SNIPPEN_DOORMAN_DATABASE_PATH: /app/data/doorman.db
+      SNIPPEN_DOORMAN_LOG_LEVEL: INFO
+    depends_on:
       snippen-booking:
         condition: service_healthy
     networks:
