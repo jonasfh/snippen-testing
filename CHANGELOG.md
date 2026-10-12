@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-10-12
+
+### Added
+
+- Orchestrated `snippen-doorman-service` in `docker-compose.yml` with SQLite state persistence, 1s interval polling, and connection to `snippen-booking`.
+- Automated end-to-end integration test suite (`test/e2e/doorman.e2e.test.js`, runnable via `npm run test:e2e:doorman`) validating:
+  - Doorman REST API authentication guards and zero-PII GDPR compliance.
+  - Automatic 6-digit numeric PIN generation by `snippen-doorman-service` and two-way sync back to `snippen-booking`.
+  - Manual PIN override idempotency.
+  - Delivery of assigned door code to `fake-sms-provider` via outbound SMS notifications.
+- Updated `README.md` and `TESTING.md` with architecture diagrams, Docker Compose configuration, and test instructions for Doorman Service.
+
 ## [0.4.0] - 2026-09-05
 
 ### Added

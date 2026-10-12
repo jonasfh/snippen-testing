@@ -81,6 +81,25 @@ Dette scenariet tester at en SMS generert av booking-pluginen sendes via SMS-tje
 
 ---
 
+### 4. Teste Adgangskontroll og Dørkoder (snippen-doorman-service)
+
+Dette scenariet tester automatisk synkronisering av adgangskoder mellom Snippen Booking og Yale Doorman-tjenesten.
+
+1. **Sjekk tildelte koder i WordPress REST API**:
+   ```bash
+   curl -s -H "Authorization: Bearer test-integration-token" \
+     http://localhost:8080/wp-json/snippen/v1/door/bookings
+   ```
+2. **Observer automatisk PIN-opprettelse**:
+   - Når en ny reservasjon opprettes uten dørkode, oppdager `snippen-doorman-service` dette på neste synkroniseringssyklus.
+   - Tjenesten genererer automatisk en 6-sifret sikker PIN-kode og oppdaterer bookingen via `PATCH /wp-json/snippen/v1/door/bookings/<id>/code`.
+3. **Følg logger for Doorman-tjenesten**:
+   ```bash
+   docker compose logs -f snippen-doorman-service
+   ```
+
+---
+
 ## Automatiserte Tester
 
 Repositoryet inneholder både raske enhets- og API-tester (uten eksterne avhengigheter) og en fullstendig ende-til-ende (E2E) integrasjonstestsuite.
@@ -101,7 +120,7 @@ npm run test:watch
 
 ### 2. Ende-til-ende (E2E) integrasjonstester
 
-E2E-testene verifiserer fullstendig meldingsflyt over hele stacken (`snippen-booking` + `snippen-sms-service` + `fake-sms-provider`).
+E2E-testene verifiserer fullstendig meldingsflyt og adgangskontroll over hele stacken (`snippen-booking`, `snippen-sms-service`, `snippen-doorman-service` og `fake-sms-provider`).
 
 1. Sørg for at Docker Compose-stacken kjører:
 
@@ -109,13 +128,19 @@ E2E-testene verifiserer fullstendig meldingsflyt over hele stacken (`snippen-boo
 docker compose up -d
 ```
 
-2. Kjør E2E-testsuiten:
+2. Kjør full E2E-testsuite:
 
 ```bash
 npm run test:e2e
 ```
 
-3. Kjør alle tester (både enhets- og E2E-tester):
+3. Kjør dedikert E2E-test for Doorman Service:
+
+```bash
+npm run test:e2e:doorman
+```
+
+4. Kjør alle tester (både enhets- og E2E-tester):
 
 ```bash
 npm run test:all
