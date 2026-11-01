@@ -32,8 +32,9 @@
   "postCreateCommand": "sudo chown -R node:node /home/node/.gemini && npm install",
   "remoteUser": "node",
   "mounts": [
-    "source=snippen-testing-gemini-data,target=/home/node/.gemini,type=volume",
-    "source=${localWorkspaceFolder}/..,target=/workspaces,type=bind,consistency=cached"
+    "source=${localWorkspaceFolderBasename}-gemini-data,target=/home/node/.gemini,type=volume",
+    "source=${localWorkspaceFolder}/..,target=/workspaces,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.gitconfig,target=/etc/gitconfig,type=bind,readonly"
   ],
   "workspaceFolder": "/workspaces/snippen-testing",
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/snippen-testing,type=bind,consistency=cached"

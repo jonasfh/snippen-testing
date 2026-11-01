@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.1] - 2026-11-01
+
+### Changed
+
+- Aligned `.devcontainer/devcontainer.json` with `snippen-doorman-service` and `snippen-booking` (`#28`):
+  - Use `${localWorkspaceFolderBasename}-gemini-data` Docker volume for `/home/node/.gemini` to persist Antigravity sessions across container builds.
+  - Mount host `~/.gitconfig` read-only to `/etc/gitconfig`.
+
 ## [0.5.0] - 2026-10-12
 
 ### Added
