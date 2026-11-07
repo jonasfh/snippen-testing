@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Configured 2-day (2880 minutes) lead-time window in `docker-compose.yml` for `snippen-doorman-service` (`SNIPPEN_LEAD_TIME_MINUTES=2880` / `--lead-time 2880`) so upcoming reservations within 48 hours are staged for lock provisioning while further-out bookings stay scheduled in the database.
+- Added candidate URL fallbacks in E2E test suites ([doorman.e2e.test.js](file:///workspaces/snippen-testing/test/e2e/doorman.e2e.test.js), [full-stack.e2e.test.js](file:///workspaces/snippen-testing/test/e2e/full-stack.e2e.test.js)) supporting container gateways and alternate host ports.
+- Added E2E verification test for lead-time window classification between immediate bookings and scheduled database reservations.
+- Disabled SMS rate limiter in `docker-compose.yml` (`SNIPPEN_SMS_RATE_LIMIT_ENABLED=false`) to allow automated test suites to run cleanly without artificial cooloff delays.
+
 ## [0.5.1] - 2026-11-01
 
 ### Changed

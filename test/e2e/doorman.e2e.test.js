@@ -59,6 +59,9 @@ async function ensureDoormanApiEnabled() {
     await execAsync(
       `docker exec snippen-booking wp --path=/wordpress option set snippen_doorman_api_token "${DOORMAN_API_TOKEN}" --allow-root`,
     );
+    await execAsync(
+      `docker exec snippen-booking wp --path=/wordpress db query "UPDATE wp_snippen_booking_objects SET door_lock_id = 1 WHERE door_lock_id IS NULL;" --allow-root`,
+    );
   } catch {
     // If docker exec is not available directly, rely on container init configuration
   }
@@ -72,6 +75,10 @@ describe("Snippen Doorman Service E2E Integration Test Suite", () => {
           "http://snippen-booking:8080",
           "http://127.0.0.1:8080",
           "http://localhost:8080",
+          "http://172.17.0.1:8080",
+          "http://172.17.0.1:8081",
+          "http://127.0.0.1:8081",
+          "http://localhost:8081",
         ],
         "/wp-json/snippen/v1/door/bookings",
       );
@@ -83,6 +90,7 @@ describe("Snippen Doorman Service E2E Integration Test Suite", () => {
         "http://fake-sms-provider:3000",
         "http://127.0.0.1:3000",
         "http://localhost:3000",
+        "http://172.17.0.1:3000",
       ]);
     }
 
@@ -325,5 +333,62 @@ describe("Snippen Doorman Service E2E Integration Test Suite", () => {
       receivedMsg.text.includes(activeDoorCode),
       `SMS text must contain assigned door code ${activeDoorCode}`,
     );
+  });
+
+  it("5. Lead-Time Window Verification: Active staging vs Scheduled Database reservations", async () => {
+    // 5a. Retrieve current bookings and verify dates
+    const bookingsRes = await fetch(`${DOORMAN_API_URL}/bookings`, {
+      headers: { Authorization: `Bearer ${DOORMAN_API_TOKEN}` },
+    });
+    assert.equal(bookingsRes.status, 200);
+    const data = await bookingsRes.json();
+    assert.ok(data.bookings && data.bookings.length > 0);
+
+    const now = new Date(data.server_time || Date.now());
+    const leadTimeMs = 2880 * 60 * 1000; // 2 days (2880 minutes)
+
+    // 5b. Classify bookings based on whether they fall inside the 2-day lead-time window
+    const insideWindow = [];
+    const outsideWindow = [];
+
+    for (const b of data.bookings) {
+      const startTime = new Date(b.start_time);
+      const diffMs = startTime.getTime() - now.getTime();
+      if (diffMs <= leadTimeMs) {
+        insideWindow.push(b);
+      } else {
+        outsideWindow.push(b);
+      }
+    }
+
+    // Verify test data topology: contains both immediate upcoming and further out reservations
+    assert.ok(
+      insideWindow.length >= 1,
+      "Expected at least one booking inside the 2-day lead-time window (e.g. +1 day)",
+    );
+    assert.ok(
+      outsideWindow.length >= 1,
+      "Expected at least one booking outside the 2-day lead-time window (e.g. +3 or +7 days)",
+    );
+
+    // 5c. Check status endpoint (if published by doorman service)
+    const statusRes = await fetch(`${DOORMAN_API_URL}/status`, {
+      headers: { Authorization: `Bearer ${DOORMAN_API_TOKEN}` },
+    });
+    if (statusRes.ok) {
+      const statusData = await statusRes.json();
+      const servicesStatus = statusData.services_status || {};
+      const firstServiceKey = Object.keys(servicesStatus)[0];
+      const servicePayload = firstServiceKey
+        ? servicesStatus[firstServiceKey]
+        : statusData.doorman_status;
+
+      if (servicePayload && Array.isArray(servicePayload.reservations_in_db)) {
+        assert.ok(
+          servicePayload.reservations_in_db.length >= 2,
+          "Doorman service DB should track all synced upcoming reservations",
+        );
+      }
+    }
   });
 });

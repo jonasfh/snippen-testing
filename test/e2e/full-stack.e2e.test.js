@@ -67,6 +67,7 @@ describe("Full Stack E2E Integration Test Suite", () => {
         "http://fake-sms-provider:3000",
         "http://127.0.0.1:3000",
         "http://localhost:3000",
+        "http://172.17.0.1:3000",
       ]);
     }
 
@@ -76,6 +77,10 @@ describe("Full Stack E2E Integration Test Suite", () => {
           "http://snippen-booking:8080",
           "http://127.0.0.1:8080",
           "http://localhost:8080",
+          "http://172.17.0.1:8080",
+          "http://172.17.0.1:8081",
+          "http://127.0.0.1:8081",
+          "http://localhost:8081",
         ],
         "/wp-json/snippen/v1/sms/outbox",
       );
