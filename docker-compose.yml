@@ -33,7 +33,7 @@ services:
     container_name: snippen-booking
     user: root
     ports:
-      - "8080:8080"
+      - "${BOOKING_PORT:-8081}:8080"
     environment:
       PORT: 8080
       INIT_GATEWAY: "true"
@@ -63,6 +63,7 @@ services:
       SNIPPEN_SMS_SYNC_INTERVAL: "1.0"
       SNIPPEN_SMS_LOG_LEVEL: INFO
       SNIPPEN_SMS_CHECK_UPDATES_ON_STARTUP: "false"
+      SNIPPEN_SMS_RATE_LIMIT_ENABLED: "false"
     depends_on:
       fake-sms-provider:
         condition: service_healthy
@@ -76,7 +77,16 @@ services:
       context: ../snippen-doorman-service
       dockerfile: Dockerfile
     container_name: snippen-doorman-service
-    command: ["snippen-doorman", "service", "run", "--interval", "1.0"]
+    command:
+      [
+        "snippen-doorman",
+        "service",
+        "run",
+        "--interval",
+        "1.0",
+        "--lead-time",
+        "${SNIPPEN_LEAD_TIME_MINUTES:-2880}",
+      ]
     environment:
       PYTHONUNBUFFERED: "1"
       SNIPPEN_DOORMAN_API_URL: http://snippen-booking:8080/wp-json/snippen/v1/door
@@ -86,6 +96,8 @@ services:
       SNIPPEN_DOORMAN_STORAGE_TYPE: sqlite
       SNIPPEN_DOORMAN_DATABASE_PATH: /app/data/doorman.db
       SNIPPEN_DOORMAN_LOG_LEVEL: INFO
+      SNIPPEN_LEAD_TIME_MINUTES: ${SNIPPEN_LEAD_TIME_MINUTES:-2880}
+      SNIPPEN_PIN_LEAD_TIME_MINUTES: ${SNIPPEN_PIN_LEAD_TIME_MINUTES:-2880}
     depends_on:
       snippen-booking:
         condition: service_healthy

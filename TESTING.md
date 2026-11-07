@@ -90,10 +90,16 @@ Dette scenariet tester automatisk synkronisering av adgangskoder mellom Snippen 
    curl -s -H "Authorization: Bearer test-integration-token" \
      http://localhost:8080/wp-json/snippen/v1/door/bookings
    ```
-2. **Observer automatisk PIN-opprettelse**:
+2. **Observer automatisk PIN-opprettelse og JIT-provisjonering**:
    - Når en ny reservasjon opprettes uten dørkode, oppdager `snippen-doorman-service` dette på neste synkroniseringssyklus.
    - Tjenesten genererer automatisk en 6-sifret sikker PIN-kode og oppdaterer bookingen via `PATCH /wp-json/snippen/v1/door/bookings/<id>/code`.
-3. **Følg logger for Doorman-tjenesten**:
+   - I testriggen er `SNIPPEN_LEAD_TIME_MINUTES` satt til 2880 minutter (2 dager). Reservasjoner som starter innen 48 timer (slik som morgendagens testbooking) klargjøres for provisjonering på låsen(e), mens reservasjoner lenger frem i tid (f.eks. +3 og +7 dager) forblir lagret i databasen i `SCHEDULED`-tilstand.
+3. **Sjekk status og provisjonering via status-endepunktet**:
+   ```bash
+   curl -s -H "Authorization: Bearer test-integration-token" \
+     http://localhost:8080/wp-json/snippen/v1/door/status
+   ```
+4. **Følg logger for Doorman-tjenesten**:
    ```bash
    docker compose logs -f snippen-doorman-service
    ```
