@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+COMPOSE_STACK=(-f "$SCRIPT_DIR/docker-compose.yml" -f "$SCRIPT_DIR/docker-compose.dev.yml")
+COMPOSE_TOOLS=(-f "$SCRIPT_DIR/compose.tools.yml")
+
+run_tool() {
+  docker compose "${COMPOSE_TOOLS[@]}" run -T --rm --no-deps testing-tools "$@"
+}
+
+run_interactive() {
+  docker compose "${COMPOSE_TOOLS[@]}" run --rm --no-deps testing-tools "$@"
+}
+
+ensure_npm_cmd() {
+  local cmd="$1"
+  run_tool bash -lc "[ -d node_modules/eslint ] || npm ci --no-audit --no-fund; $cmd"
+}
+
+usage() {
+  cat <<'EOF'
+Usage: ./dev <command> [args...]
+
+Fullstack orchestration (all 4 services with live bind-mounts):
+  up                 Start fullstack (WordPress UI at http://localhost:8081)
+  down               Stop and remove fullstack containers
+  ps                 Show container status
+  logs [service]     Tail logs
+  restart [service]  Restart stack or service
+
+Testing & linting (runs in ephemeral testing-tools container):
+  test               Run unit tests (npm test)
+  e2e                Run full-stack E2E tests (npm run test:e2e)
+  e2e:doorman        Run doorman E2E tests (npm run test:e2e:doorman)
+  lint               Run ESLint + Prettier check
+  lint:fix           Run Prettier write
+  shell              Open interactive bash shell in testing-tools
+EOF
+}
+
+cmd="${1:-help}"
+shift || true
+
+case "$cmd" in
+  up)
+    docker compose "${COMPOSE_STACK[@]}" up -d "$@"
+    echo "Fullstack running: Booking UI -> http://localhost:8081 | Fake SMS -> http://localhost:3000"
+    ;;
+  down)           docker compose "${COMPOSE_STACK[@]}" down "$@" ;;
+  ps)             docker compose "${COMPOSE_STACK[@]}" ps "$@" ;;
+  logs)           docker compose "${COMPOSE_STACK[@]}" logs -f "$@" ;;
+  restart)        docker compose "${COMPOSE_STACK[@]}" restart "$@" ;;
+  test)           ensure_npm_cmd "npm test" ;;
+  e2e)            ensure_npm_cmd "npm run test:e2e" ;;
+  e2e:doorman)    ensure_npm_cmd "npm run test:e2e:doorman" ;;
+  lint)           ensure_npm_cmd "npm run lint && npm run format:check" ;;
+  lint:fix)       ensure_npm_cmd "npm run format" ;;
+  shell)          run_interactive bash ;;
+  help|-h|--help) usage ;;
+  *)
+    echo "Unknown command: $cmd" >&2
+    usage >&2
+    exit 1
+    ;;
+esac

@@ -1,0 +1,31 @@
+FROM python:3.14-bookworm
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    VENV_PATH=/opt/venv \
+    PATH="/opt/venv/bin:$PATH"
+
+WORKDIR /workspaces/snippen-doorman-service
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    bluez \
+    adb \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python -m venv /opt/venv
+
+COPY pyproject.toml README.md ./
+COPY src/ ./src/
+
+RUN /opt/venv/bin/pip install --no-cache-dir -e ".[dev]"
+
+ARG USER_UID=1000
+ARG USER_GID=1000
+RUN groupadd --gid "$USER_GID" vscode || true \
+    && useradd -s /bin/bash --uid "$USER_UID" --gid "$USER_GID" -m vscode || true \
+    && usermod -aG dialout vscode \
+    && mkdir -p /home/vscode \
+    && ln -s /opt/venv /home/vscode/.venv \
+    && chown -R "$USER_UID":"$USER_GID" /opt/venv /home/vscode
+
+USER vscode

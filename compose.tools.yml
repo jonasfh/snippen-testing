@@ -1,0 +1,54 @@
+# On-demand ephemeral tooling containers for host-first agentic development.
+# Usage: docker compose -f compose.tools.yml run --rm <service> <command>
+services:
+  booking-tools:
+    build:
+      context: ../snippen-booking/.devcontainer
+      dockerfile: Dockerfile
+    entrypoint: []
+    userns_mode: "keep-id"
+    working_dir: /workspaces/snippen-booking
+    volumes:
+      - ../snippen-booking:/workspaces/snippen-booking
+      - booking-vendor:/workspaces/snippen-booking/vendor
+      - booking-node-modules:/workspaces/snippen-booking/node_modules
+    environment:
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+      WP_DEBUG: "1"
+
+  sms-tools:
+    build:
+      context: ../snippen-sms-service
+      dockerfile: ../snippen-testing/docker/Dockerfile.sms-tools
+    userns_mode: "keep-id"
+    working_dir: /workspaces/snippen-sms-service
+    privileged: true
+    volumes:
+      - ../snippen-sms-service:/workspaces/snippen-sms-service
+      - /dev:/dev
+
+  doorman-tools:
+    build:
+      context: ../snippen-doorman-service
+      dockerfile: ../snippen-testing/docker/Dockerfile.doorman-tools
+    userns_mode: "keep-id"
+    working_dir: /workspaces/snippen-doorman-service
+    privileged: true
+    volumes:
+      - ../snippen-doorman-service:/workspaces/snippen-doorman-service
+      - /dev/bus/usb:/dev/bus/usb
+      - /var/run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket
+
+  testing-tools:
+    image: node:22-bookworm
+    userns_mode: "keep-id"
+    working_dir: /workspaces/snippen-testing
+    network_mode: host
+    volumes:
+      - .:/workspaces/snippen-testing
+      - testing-node-modules:/workspaces/snippen-testing/node_modules
+
+volumes:
+  booking-vendor:
+  booking-node-modules:
+  testing-node-modules:

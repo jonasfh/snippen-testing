@@ -1,6 +1,7 @@
 # Agent Instructions for Snippen Testing
 
 ## Always-On Rules
+- **Host-First Execution (`./dev`)**: When running on the host (outside Dev Containers), use `./dev up` (starts all 4 services with live bind-mounts from `docker-compose.dev.yml`, WordPress UI at `http://localhost:8081`), `./dev down`, `./dev test`, `./dev e2e`, `./dev lint`, and `./dev lint:fix`.
 - **Technology**: Use Node.js, JavaScript, `npm`, and Docker / Docker Compose (do not introduce nginx, Apache, Python, or another application server without a specific architectural reason).
 - **GitHub Issue Workflow**: Follow `gh-issue/<id>` branching, Conventional Commits (`<type>[scope]: <description> (#<id>)`), **Rebase and merge** (`gh pr merge <id> --rebase --delete-branch`), and stop after `gh pr create`.
 - **Testing & Documentation**: Keep `README.md` and docs in sync; verify automated tests and Docker/CI compatibility before completion.

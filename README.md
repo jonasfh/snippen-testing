@@ -50,6 +50,29 @@ Repositoryet inneholder en **Fake SMS Provider** og et interaktivt **Web Dashboa
 
 ## Hurtigstart
 
+### Host-first utvikling (`./dev`)
+
+For utvikling direkte fra host-maskinen med live bind-mounts av alle fire repos (`docker-compose.yml` + `docker-compose.dev.yml`) og verktøycontainere (`compose.tools.yml`):
+
+```bash
+# Fullstack-orkestrering (alle 4 tjenester med live kildekode)
+./dev up                 # Start stack (Booking UI: http://localhost:8081, Fake SMS: http://localhost:3000)
+./dev down               # Stopp og fjern containere
+./dev ps                 # Vis containerstatus
+./dev logs [service]     # Følg logger
+./dev restart [service]  # Restart stack eller enkelttjeneste
+
+# Testing og linting (kjører i ephemere testing-tools-container)
+./dev test               # Kjør enhetstester (npm test)
+./dev e2e                # Kjør fullstack E2E-tester (npm run test:e2e)
+./dev e2e:doorman        # Kjør doorman E2E-tester (npm run test:e2e:doorman)
+./dev lint               # Kjør ESLint + Prettier-sjekk
+./dev lint:fix           # Formater med Prettier
+./dev shell              # Åpne interaktivt bash-skall i testing-tools
+```
+
+`compose.tools.yml` definerer også verktøycontainere (`booking-tools`, `sms-tools`, `doorman-tools`) som brukes av `./dev` i de tilhørende repoene.
+
 ### Kjøre full stack med Docker Compose
 
 Start hele stacken (`fake-sms-provider`, `snippen-booking`, `snippen-sms-service` og `snippen-doorman-service`):

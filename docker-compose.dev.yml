@@ -1,0 +1,23 @@
+# Development override for docker-compose.yml.
+# Bind-mounts live source directories so changes in any of the 4 repos take
+# effect immediately (or on container restart) without rebuilding images.
+services:
+  fake-sms-provider:
+    volumes:
+      - ./src:/app/src:ro
+
+  snippen-booking:
+    volumes:
+      - ../snippen-booking/src/wp-content/plugins/booking-plugin:/workspaces/snippen-booking/src/wp-content/plugins/booking-plugin
+
+  snippen-sms-service:
+    environment:
+      PYTHONPATH: /app/src
+    volumes:
+      - ../snippen-sms-service/src:/app/src:ro
+
+  snippen-doorman-service:
+    environment:
+      PYTHONPATH: /app/src
+    volumes:
+      - ../snippen-doorman-service/src:/app/src:ro
