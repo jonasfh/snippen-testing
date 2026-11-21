@@ -1,0 +1,10 @@
+{
+  "entries": [
+    {
+      "path": "common-agent-instructions/skills"
+    },
+    {
+      "path": "node-agent-instructions/skills"
+    }
+  ]
+}
