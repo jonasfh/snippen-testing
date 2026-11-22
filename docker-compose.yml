@@ -104,6 +104,29 @@ services:
     networks:
       - snippen-net
 
+  ble-web-config:
+    image: python:3.14-slim
+    container_name: snippen-ble-web-config
+    command: ["python", "-m", "http.server", "8080", "--directory", "/srv"]
+    ports:
+      - "${BLE_WEB_CONFIG_PORT:-8082}:8080"
+    volumes:
+      - ../snippen-sms-service/tools/web-config:/srv:ro
+    networks:
+      - snippen-net
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8080/').read(1)",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 2s
+
 networks:
   snippen-net:
     driver: bridge

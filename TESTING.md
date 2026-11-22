@@ -8,16 +8,23 @@ Denne guiden beskriver hvordan du tester integrasjonen og meldingsflyten i Snipp
 
 Når hele stacken kjører med Docker Compose (`docker compose up -d`), er følgende webgrensesnitt tilgjengelige:
 
-| Tjeneste                     | URL i nettleseren                                                                                                              | Innlogging / Beskrivelse                                                           |
-| :--------------------------- | :----------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------- |
-| **Fake SMS Dashboard**       | [http://localhost:3000](http://localhost:3000)                                                                                 | Ingen innlogging nødvendig. Sanntidsvisning av meldinger, logger og SMS-simulator. |
-| **Snippen Booking Admin**    | [http://localhost:8080/wp-admin/](http://localhost:8080/wp-admin/)                                                             | **Brukernavn:** `admin`<br>**Passord:** `admin`                                    |
-| **Snippen Booking Oversikt** | [http://localhost:8080/wp-admin/admin.php?page=snippen-booking](http://localhost:8080/wp-admin/admin.php?page=snippen-booking) | Administrasjon av alle reservasjoner og kommunikasjonshistorikk.                   |
-| **Felleskalender (Forside)** | [http://localhost:8080/](http://localhost:8080/)                                                                               | Komplett bookingkalender for alle lokaler.                                         |
-| **Festsalen Booking**        | [http://localhost:8080/booking-demo-festsalen/](http://localhost:8080/booking-demo-festsalen/)                                 | Dedikert bookingside for Festsalen.                                                |
-| **Peisestuen Booking**       | [http://localhost:8080/booking-demo-peisestuen/](http://localhost:8080/booking-demo-peisestuen/)                               | Dedikert bookingside for Peisestuen.                                               |
-| **Aktivering av konto**      | [http://localhost:8080/booking-demo-aktivering-av-konto/](http://localhost:8080/booking-demo-aktivering-av-konto/)             | Aktiveringsskjema for beboere med mine bookinger.                                  |
-| **Vilkår for leie**          | [http://localhost:8080/booking-demo-vilkar-for-leie/](http://localhost:8080/booking-demo-vilkar-for-leie/)                     | Leievilkår og regler for Snippen.                                                  |
+| Tjeneste                     | URL i nettleseren                                                                                                              | Innlogging / Beskrivelse                                                                    |
+| :--------------------------- | :----------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------ |
+| **Fake SMS Dashboard**       | [http://localhost:3000](http://localhost:3000)                                                                                 | Ingen innlogging nødvendig. Sanntidsvisning av meldinger, logger og SMS-simulator.          |
+| **BLE Web Configurator**     | [http://localhost:8082](http://localhost:8082)                                                                                 | Web Bluetooth-provisjonering, diagnostikk og lokal OTA (`firmware_bundle.json`) for LilyGO. |
+| **Snippen Booking Admin**    | [http://localhost:8080/wp-admin/](http://localhost:8080/wp-admin/)                                                             | **Brukernavn:** `admin`<br>**Passord:** `admin`                                             |
+| **Snippen Booking Oversikt** | [http://localhost:8080/wp-admin/admin.php?page=snippen-booking](http://localhost:8080/wp-admin/admin.php?page=snippen-booking) | Administrasjon av alle reservasjoner og kommunikasjonshistorikk.                            |
+| **Felleskalender (Forside)** | [http://localhost:8080/](http://localhost:8080/)                                                                               | Komplett bookingkalender for alle lokaler.                                                  |
+| **Festsalen Booking**        | [http://localhost:8080/booking-demo-festsalen/](http://localhost:8080/booking-demo-festsalen/)                                 | Dedikert bookingside for Festsalen.                                                         |
+| **Peisestuen Booking**       | [http://localhost:8080/booking-demo-peisestuen/](http://localhost:8080/booking-demo-peisestuen/)                               | Dedikert bookingside for Peisestuen.                                                        |
+| **Aktivering av konto**      | [http://localhost:8080/booking-demo-aktivering-av-konto/](http://localhost:8080/booking-demo-aktivering-av-konto/)             | Aktiveringsskjema for beboere med mine bookinger.                                           |
+| **Vilkår for leie**          | [http://localhost:8080/booking-demo-vilkar-for-leie/](http://localhost:8080/booking-demo-vilkar-for-leie/)                     | Leievilkår og regler for Snippen.                                                           |
+
+> **Tilgang til BLE Web Configurator (`http://localhost:8082`):**
+>
+> - **Samme PC:** Web Bluetooth fungerer uten HTTPS på `http://localhost:8082`.
+> - **Mobil over lokalt nettverk:** Krever HTTPS eller Chrome port-forwarding (`chrome://inspect`).
+> - **Lokal OTA mot LilyGO:** Pek OTA-manifestet til `http://<PC-IP>:8082/firmware_bundle.json`.
 
 ---
 
