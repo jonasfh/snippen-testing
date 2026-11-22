@@ -119,6 +119,18 @@ export function renderDashboardHtml({
       border: 1px solid rgba(16, 185, 129, 0.25);
     }
 
+    .status-badge.paused {
+      background: rgba(245, 158, 11, 0.12);
+      color: var(--accent-amber);
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+
+    .status-badge.offline {
+      background: rgba(244, 63, 94, 0.12);
+      color: var(--accent-rose);
+      border-color: rgba(244, 63, 94, 0.3);
+    }
+
     .status-dot {
       width: 8px;
       height: 8px;
@@ -126,6 +138,18 @@ export function renderDashboardHtml({
       background: var(--accent-green);
       box-shadow: 0 0 8px var(--accent-green);
       animation: pulse 2s infinite ease-in-out;
+    }
+
+    .status-badge.paused .status-dot {
+      background: var(--accent-amber);
+      box-shadow: 0 0 8px var(--accent-amber);
+      animation: none;
+    }
+
+    .status-badge.offline .status-dot {
+      background: var(--accent-rose);
+      box-shadow: 0 0 8px var(--accent-rose);
+      animation: none;
     }
 
     @keyframes pulse {
@@ -174,6 +198,24 @@ export function renderDashboardHtml({
     }
     .btn-danger:hover {
       background: rgba(244, 63, 94, 0.2);
+    }
+
+    .btn-warning {
+      background: rgba(245, 158, 11, 0.12);
+      color: var(--accent-amber);
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+    .btn-warning:hover {
+      background: rgba(245, 158, 11, 0.22);
+    }
+
+    .btn-success {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border-color: rgba(16, 185, 129, 0.35);
+    }
+    .btn-success:hover {
+      background: rgba(16, 185, 129, 0.25);
     }
 
     .btn-sm {
@@ -493,6 +535,7 @@ export function renderDashboardHtml({
     .tag-inbound { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; }
     .tag-webhook { background: rgba(139, 92, 246, 0.2); color: #c4b5fd; }
     .tag-reset { background: rgba(244, 63, 94, 0.2); color: #fda4af; }
+    .tag-paused { background: rgba(245, 158, 11, 0.2); color: #fcd34d; }
     .tag-info { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; }
 
     .log-msg {
@@ -525,10 +568,13 @@ export function renderDashboardHtml({
         </div>
       </div>
       <div class="header-actions">
-        <div class="status-badge">
+        <div id="status-badge" class="status-badge">
           <span class="status-dot"></span>
-          <span id="health-status">OPERATIONAL</span>
+          <span id="health-status">AKTIV</span>
         </div>
+        <button id="btn-toggle-pause" class="btn btn-warning btn-sm" title="Pause eller gjenoppta utgående SMS">
+          ⏸️ Pause
+        </button>
         <button id="btn-refresh" class="btn btn-secondary btn-sm" title="Oppdater visning">
           🔄 Oppdater
         </button>
@@ -635,12 +681,15 @@ export function renderDashboardHtml({
     (function() {
       let activeTab = 'messages';
       let refreshTimer = null;
+      let isPaused = false;
 
       const statTotal = document.getElementById('stat-total');
       const statInbound = document.getElementById('stat-inbound');
       const statOutbound = document.getElementById('stat-outbound');
       const statUptime = document.getElementById('stat-uptime');
+      const statusBadge = document.getElementById('status-badge');
       const healthStatus = document.getElementById('health-status');
+      const btnTogglePause = document.getElementById('btn-toggle-pause');
       const messagesContainer = document.getElementById('messages-container');
       const logsContainer = document.getElementById('logs-container');
       const tabCountMsg = document.getElementById('tab-count-msg');
@@ -695,14 +744,37 @@ export function renderDashboardHtml({
         setTimeout(() => { formAlert.style.display = 'none'; }, 4000);
       }
 
+      function updatePauseUi(paused) {
+        isPaused = Boolean(paused);
+        if (isPaused) {
+          statusBadge.className = 'status-badge paused';
+          healthStatus.textContent = 'PAUSET';
+          btnTogglePause.className = 'btn btn-success btn-sm';
+          btnTogglePause.textContent = '▶️ Gjenoppta';
+        } else {
+          statusBadge.className = 'status-badge';
+          healthStatus.textContent = 'AKTIV';
+          btnTogglePause.className = 'btn btn-warning btn-sm';
+          btnTogglePause.textContent = '⏸️ Pause';
+        }
+      }
+
       async function fetchState() {
         try {
-          // Health
-          const healthRes = await fetch('/health');
+          // Health & Status
+          const [healthRes, statusRes] = await Promise.all([
+            fetch('/health'),
+            fetch('/api/status'),
+          ]);
+
           if (healthRes.ok) {
             const hData = await healthRes.json();
             statUptime.textContent = formatUptime(hData.uptime);
-            healthStatus.textContent = 'OPERATIONAL';
+          }
+
+          if (statusRes.ok) {
+            const sData = await statusRes.json();
+            updatePauseUi(sData.paused);
           }
 
           // Messages
@@ -731,6 +803,7 @@ export function renderDashboardHtml({
           }
         } catch (err) {
           console.error('Fetch state error:', err);
+          statusBadge.className = 'status-badge offline';
           healthStatus.textContent = 'OFFLINE';
         }
       }
@@ -789,6 +862,7 @@ export function renderDashboardHtml({
           else if (entry.type === 'inbound') tagClass = 'tag-inbound';
           else if (entry.type === 'webhook') tagClass = 'tag-webhook';
           else if (entry.type === 'reset') tagClass = 'tag-reset';
+          else if (entry.type === 'paused') tagClass = 'tag-paused';
 
           return \`
             <div class="log-entry">
@@ -845,6 +919,24 @@ export function renderDashboardHtml({
         } finally {
           btn.disabled = false;
           btn.textContent = '📤 Send innkommende SMS';
+        }
+      });
+
+      // Toggle pause / resume
+      btnTogglePause.addEventListener('click', async () => {
+        btnTogglePause.disabled = true;
+        try {
+          const endpoint = isPaused ? '/api/resume' : '/api/pause';
+          const res = await fetch(endpoint, { method: 'POST' });
+          if (res.ok) {
+            const data = await res.json();
+            updatePauseUi(data.paused);
+            fetchState();
+          }
+        } catch (err) {
+          alert('Kunne ikke endre pause-tilstand: ' + err.message);
+        } finally {
+          btnTogglePause.disabled = false;
         }
       });
 

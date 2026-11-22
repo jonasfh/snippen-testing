@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-22
+
+### Added
+
+- Pause/resume control for `fake-sms-provider` (`GET /api/status`, `POST /api/status`, `POST /api/pause`, `POST /api/resume`) returning `503 Service Unavailable` on outbound SMS endpoints while paused and logging pause/rejection events (`#38`).
+- Pause/Gjenoppta toggle button and `AKTIV` / `PAUSET` status badge in the Web Frontend Dashboard header (`#38`).
+- Unit tests in `test/pause.test.js` and `test/dashboard.test.js` covering pause/resume state, `503` outbound rejection, and UI controls (`#38`).
+
 ### Changed
 
 - Configured 2-day (2880 minutes) lead-time window in `docker-compose.yml` for `snippen-doorman-service` (`SNIPPEN_LEAD_TIME_MINUTES=2880` / `--lead-time 2880`) so upcoming reservations within 48 hours are staged for lock provisioning while further-out bookings stay scheduled in the database.

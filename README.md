@@ -121,7 +121,7 @@ Når Fake SMS Provider kjører, gir [http://localhost:3000](http://localhost:300
 1. **Meldingsfeed**: Se alle innkommende og utgående meldinger i sanntid med avsender, mottaker, innhold, status og tidsstempel.
 2. **SMS-simulator**: Send en simulert innkommende SMS fra et gitt telefonnummer med forhåndsdefinerte hurtigmaler.
 3. **Hendelseslogg**: Følg med på serverhendelser, innkommende forespørsler og webhook-kall.
-4. **Tilstandsstyring**: Nullstill alle meldinger med ett klikk for å klargjøre systemet til nye tester.
+4. **Tilstandsstyring**: Nullstill alle meldinger med ett klikk, eller **pause/gjenoppta** utgående SMS (`503 Service Unavailable`) direkte fra headeren ved testing av alternative SMS-leverandører eller fallback-mekanismer.
 
 ---
 
@@ -143,8 +143,12 @@ Tjenesten konfigureres via miljøvariabler:
 | Metode & Sti              | Beskrivelse                                                      |
 | :------------------------ | :--------------------------------------------------------------- |
 | `GET /`                   | Web Frontend Dashboard (HTML)                                    |
-| `GET /health`             | Helseendepunkt (`200 OK`)                                        |
-| `POST /messages/outbound` | Sende utgående SMS fra SMS-tjenesten                             |
+| `GET /health`             | Helseendepunkt (`200 OK`, inkluderer `paused`-flagg)             |
+| `GET /api/status`         | Hente aktiv/pauset-tilstand for Fake SMS Provider                |
+| `POST /api/status`        | Sette pause-tilstand (`{ "paused": true \| false }`)             |
+| `POST /api/pause`         | Pause utgående SMS (`503 Service Unavailable`)                   |
+| `POST /api/resume`        | Gjenoppta utgående SMS                                           |
+| `POST /messages/outbound` | Sende utgående SMS fra SMS-tjenesten (`503` når pauset)          |
 | `POST /messages/inbound`  | Simulere innkommende SMS fra leietaker                           |
 | `GET /messages`           | Hente alle meldinger (støtter filter: `direction`, `to`, `from`) |
 | `GET /messages/:id`       | Hente enkeltmelding etter ID                                     |
