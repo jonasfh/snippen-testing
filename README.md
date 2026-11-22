@@ -55,8 +55,8 @@ Repositoryet inneholder en **Fake SMS Provider** og et interaktivt **Web Dashboa
 For utvikling direkte fra host-maskinen med live bind-mounts av alle fire repos (`docker-compose.yml` + `docker-compose.dev.yml`) og verktøycontainere (`compose.tools.yml`):
 
 ```bash
-# Fullstack-orkestrering (alle 4 tjenester med live kildekode)
-./dev up                 # Start stack (Booking UI: http://localhost:8081, Fake SMS: http://localhost:3000)
+# Fullstack-orkestrering (alle tjenester med live kildekode)
+./dev up                 # Start stack (Booking UI: http://localhost:8081, Fake SMS: http://localhost:3000, BLE Web Config: http://localhost:8082)
 ./dev down               # Stopp og fjern containere
 ./dev ps                 # Vis containerstatus
 ./dev logs [service]     # Følg logger
