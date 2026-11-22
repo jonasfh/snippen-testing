@@ -88,6 +88,37 @@ export function createApp(
   webhookDispatcher = dispatchWebhook,
   logger = new EventLogger(),
 ) {
+  let isPaused = false;
+
+  function setPaused(paused) {
+    isPaused = Boolean(paused);
+    logger.log({
+      type: "paused",
+      level: isPaused ? "warn" : "info",
+      message: isPaused
+        ? "Fake SMS Provider pauset — utgående SMS returnerer 503"
+        : "Fake SMS Provider gjenopptatt — utgående SMS er aktiv",
+      details: { paused: isPaused },
+    });
+  }
+
+  function rejectIfPaused(res, pathname) {
+    if (!isPaused) {
+      return false;
+    }
+    logger.log({
+      type: "paused",
+      level: "warn",
+      message: `Avviste utgående SMS (${pathname}) fordi Fake SMS Provider er pauset`,
+      details: { pathname, statusCode: 503 },
+    });
+    sendJson(res, 503, {
+      error: "Fake SMS Provider is paused",
+      paused: true,
+    });
+    return true;
+  }
+
   return async function requestListener(req, res) {
     try {
       const url = new URL(req.url, `http://${req.headers.host ?? "localhost"}`);
@@ -110,6 +141,7 @@ export function createApp(
         if (req.method === "GET") {
           sendJson(res, 200, {
             status: "ok",
+            paused: isPaused,
             uptime: process.uptime(),
             timestamp: new Date().toISOString(),
           });
@@ -117,6 +149,75 @@ export function createApp(
         }
 
         res.setHeader("Allow", "GET");
+        sendJson(res, 405, { error: "Method Not Allowed" });
+        return;
+      }
+
+      // 2b. Provider pause/resume status endpoints
+      if (pathname === "/api/status") {
+        if (req.method === "GET") {
+          sendJson(res, 200, {
+            paused: isPaused,
+            status: isPaused ? "paused" : "active",
+          });
+          return;
+        }
+
+        if (req.method === "POST") {
+          let body;
+          try {
+            body = await readJsonBody(req);
+          } catch (err) {
+            sendJson(res, err.statusCode ?? 400, { error: err.message });
+            return;
+          }
+
+          if (typeof body.paused !== "boolean") {
+            sendJson(res, 400, {
+              error: "Field 'paused' (boolean) is required",
+            });
+            return;
+          }
+
+          setPaused(body.paused);
+          sendJson(res, 200, {
+            paused: isPaused,
+            status: isPaused ? "paused" : "active",
+          });
+          return;
+        }
+
+        res.setHeader("Allow", "GET, POST");
+        sendJson(res, 405, { error: "Method Not Allowed" });
+        return;
+      }
+
+      if (pathname === "/api/pause") {
+        if (req.method === "POST") {
+          setPaused(true);
+          sendJson(res, 200, {
+            paused: isPaused,
+            status: "paused",
+          });
+          return;
+        }
+
+        res.setHeader("Allow", "POST");
+        sendJson(res, 405, { error: "Method Not Allowed" });
+        return;
+      }
+
+      if (pathname === "/api/resume") {
+        if (req.method === "POST") {
+          setPaused(false);
+          sendJson(res, 200, {
+            paused: isPaused,
+            status: "active",
+          });
+          return;
+        }
+
+        res.setHeader("Allow", "POST");
         sendJson(res, 405, { error: "Method Not Allowed" });
         return;
       }
@@ -155,6 +256,10 @@ export function createApp(
         pathname === "/sms/send"
       ) {
         if (req.method === "POST") {
+          if (rejectIfPaused(res, pathname)) {
+            return;
+          }
+
           let body;
           try {
             body = await readJsonBody(req);
@@ -402,6 +507,10 @@ export function createApp(
                 ...webhookResult,
               },
             });
+            return;
+          }
+
+          if (rejectIfPaused(res, pathname)) {
             return;
           }
 

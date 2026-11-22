@@ -34,6 +34,8 @@ describe("Dashboard and Event Logs API Endpoints", () => {
     const body = await response.text();
     assert.ok(body.includes("Snippen Fake SMS Provider"));
     assert.ok(body.includes("SMS-simulator"));
+    assert.ok(body.includes("btn-toggle-pause"));
+    assert.ok(body.includes("status-badge"));
   });
 
   it("POST / should return 405 Method Not Allowed", async () => {
