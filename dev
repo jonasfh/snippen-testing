@@ -24,6 +24,7 @@ Usage: ./dev <command> [args...]
 
 Fullstack orchestration (all 4 services with live bind-mounts):
   up                 Start fullstack (WordPress UI at http://localhost:8081)
+  up --real-sms      Start Booking + Doorman only (for testing with a real SMS service)
   down               Stop and remove fullstack containers
   ps                 Show container status
   logs [service]     Tail logs
@@ -44,8 +45,14 @@ shift || true
 
 case "$cmd" in
   up)
-    docker compose "${COMPOSE_STACK[@]}" up -d "$@"
-    echo "Fullstack running: Booking UI -> http://localhost:8081 | Fake SMS -> http://localhost:3000"
+    if [ "${1:-}" = "--real-sms" ] || [ "${1:-}" = "--no-sms" ]; then
+      shift
+      docker compose "${COMPOSE_STACK[@]}" up -d snippen-booking snippen-doorman-service "$@"
+      echo "Booking + Doorman running (real SMS mode): Booking UI -> http://localhost:8081"
+    else
+      docker compose "${COMPOSE_STACK[@]}" up -d "$@"
+      echo "Fullstack running: Booking UI -> http://localhost:8081 | Fake SMS -> http://localhost:3000"
+    fi
     ;;
   down)           docker compose "${COMPOSE_STACK[@]}" down "$@" ;;
   ps)             docker compose "${COMPOSE_STACK[@]}" ps "$@" ;;
